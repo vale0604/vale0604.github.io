@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Evaluación de Códigos - Frutas y Verduras</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1 { color: #2c3e50; }
+    .question { margin-bottom: 15px; }
+    #timer { font-size: 18px; font-weight: bold; color: red; }
+    .result { margin-top: 20px; font-weight: bold; }
+    button { margin-top: 15px; padding: 8px 15px; font-size: 16px; }
+    input[type="text"] { width: 300px; padding: 5px; }
+  </style>
+</head>
+<body>
+  <h1>Evaluación de Códigos - Frutas y Verduras</h1>
+  <p><strong>Tiempo límite:</strong> 10 minutos</p>
+  <p id="timer">Tiempo restante: 10:00</p>
+
+  <form id="quizForm">
+    <div class="question">
+      <label>Nombre y Apellido del Cajero:</label><br>
+      <input type="text" name="cajero" required>
+    </div>
+
+    <!-- Preguntas -->
+    <div id="questions"></div>
+
+    <button type="submit">Enviar</button>
+  </form>
+
+  <div class="result" id="result"></div>
+  <button id="downloadBtn" style="display:none;">Descargar Resultados en Excel (CSV)</button>
+
+  <script>
+    // Tiempo límite: 10 minutos (600 segundos)
+    let time = 600;
+    let startTime = Date.now(); // guarda el momento en que inicia la prueba
+    const timerElement = document.getElementById("timer");
+    const form = document.getElementById("quizForm");
+    const resultDiv = document.getElementById("result");
+    const downloadBtn = document.getElementById("downloadBtn");
+
+    // Preguntas y respuestas correctas
+    const questions = [
+      {q:"Código de la Naranja de Jugo", a:"21012"},
+      {q:"Código de Imp Naranja de Mesa", a:"36603"},
+      {q:"Código de la Sandía", a:"819"},
+      {q:"Código del Plátano de Isla", a:"789"},
+      {q:"Código del Plátano de Seda", a:"802"},
+      {q:"Código de la Piña Hawai", a:"727"},
+      {q:"Código de la Piña Golden Baby", a:"5661"},
+      {q:"Código de la Papaya C", a:"142878"},
+      {q:"Código de la Manzana Delicia", a:"499"},
+      {q:"Código de la Imp Manzana Roja", a:"168359"},
+      {q:"Código de la Imp Manzana Verde", a:"168410"},
+      {q:"Código de la Imp Manzana Royal Gala", a:"168427"},
+      {q:"Código de Bells Plátano Bizcocho", a:"999229"},
+      {q:"Código del Tomate", a:"2714"},
+      {q:"Código de la Zanahoria", a:"13192"},
+      {q:"Código de la Papa Blanca Yungay", a:"5852"},
+      {q:"Código de la Papa Blanca", a:"12492"},
+      {q:"Código de la Papa Amarilla", a:"2158"},
+      {q:"Código de la Palta Hass", a:"23009"},
+      {q:"Código de la Palta Fuerte", a:"642"},
+      {q:"Código de Bells Palta Fuerte Madura", a:"999205"},
+      {q:"Código del Limón", a:"2288"},
+      {q:"Código del Kion", a:"2202"},
+      {q:"Código del Ajos entero", a:"19255"},
+      {q:"Código del Ají verde", a:"956"},
+      {q:"Código del Ají Limo", a:"925"}
+    ];
+
+    // Generar preguntas en el formulario
+    const qContainer = document.getElementById("questions");
+    questions.forEach((item, index) => {
+      const div = document.createElement("div");
+      div.classList.add("question");
+      div.innerHTML = `<p>${index+1}. ${item.q}</p>
+                       <input type="text" name="q${index+1}" required>`;
+      qContainer.appendChild(div);
+    });
+
+    // Contador regresivo
+    const timer = setInterval(() => {
+      const minutes = Math.floor(time / 60);
+      const seconds = time % 60;
+      timerElement.textContent = `Tiempo restante: ${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+      time--;
+      if (time < 0) {
+        clearInterval(timer);
+        form.requestSubmit();
+      }
+    }, 1000);
+
+    // Guardar resultados
+    let resultsData = [];
+    let headerRow = ["Cajero","Correctas","Total","Porcentaje","Tiempo"];
+    questions.forEach((item, i) => {
+      headerRow.push(`R${i+1}`);
+    });
+
+    form.addEventListener("submit", function(e) {
+      e.preventDefault();
+      clearInterval(timer);
+
+      const endTime = Date.now();
+      const elapsedSeconds = Math.floor((endTime - startTime) / 1000);
+      const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+      const elapsedRemaining = elapsedSeconds % 60;
+      const timeUsed = `${elapsedMinutes}:${elapsedRemaining < 10 ? "0" : ""}${elapsedRemaining}`;
+
+      const formData = new FormData(form);
+      const cajero = formData.get("cajero");
+      let score = 0;
+      let answers = [];
+
+      questions.forEach((item, i) => {
+        const answer = formData.get(`q${i+1}`).trim();
+        answers.push(answer);
+        if (answer === item.a) score++;
+      });
+
+      const total = questions.length;
+      const percentage = Math.round((score / total) * 100);
+
+      // Mostrar solo el resumen al cajero
+      resultDiv.textContent = `Resultado: ${score}/${total} (${percentage}%) - Tiempo usado: ${timeUsed}`;
+
+      // Guardar fila completa (con todas las respuestas)
+      const row = [cajero, score, total, percentage + "%", timeUsed, ...answers];
+      resultsData.push(row);
+
+      downloadBtn.style.display = "inline-block";
+    });
+
+    // Descargar CSV
+    downloadBtn.addEventListener("click", function() {
+      let csvContent = "data:text/csv;charset=utf-8,"
+        + headerRow.join(",") + "\n"
+        + resultsData.map(e => e.join(",")).join("\n");
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "resultados.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+  </script>
+</body>
+</html>
